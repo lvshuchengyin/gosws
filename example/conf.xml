@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<gosws> 
+	<secretkey>asfrbtgqwfdpojma23165748ae123afe</secretkey>  
+	<listenaddr>:8099</listenaddr>  
+	<db> 
+		<source>root:@tcp(127.0.0.1:3306)/tmp?charset=utf8</source>  
+		<maxidle>5</maxidle>  
+		<maxopen>50</maxopen> 
+	</db>  
+	<log> 
+		<level>debug</level>  
+		<path>logs/sws.log</path>  
+		<isstd>1</isstd>  
+		<maxfilenum>7</maxfilenum>  
+		<maxfilesize>2024000</maxfilesize> 
+	</log>
+	<templatesdir>templates</templatesdir>  
+	<session> 
+		<lifetime>86400</lifetime>
+		<sessname>mysql</sessname>
+		<config>
+			<name>mysql</name>
+			<jsonconfig>{"sessionGCInterval": 60}</jsonconfig>
+		</config>
+		<config>
+			<name>redis</name>
+			<jsonconfig>{"sessionGCInterval": 60}</jsonconfig>
+		</config>
+	</session> 
+	<middlewares>
+		<middleware>stat</middleware>
+		<middleware>session</middleware>
+	</middlewares>
+</gosws>
