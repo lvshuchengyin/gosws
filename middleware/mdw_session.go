@@ -5,13 +5,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
-	"gosws/context"
-	"gosws/logger"
-	"gosws/session"
-	"gosws/util"
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
+	"github.com/lvshuchengyin/gosws/session"
+	"github.com/lvshuchengyin/gosws/util"
 )
 
 const (

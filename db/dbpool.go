@@ -4,7 +4,8 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"gosws/logger"
+
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 var (

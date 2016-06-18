@@ -4,12 +4,13 @@ package config
 import (
 	"encoding/xml"
 	"fmt"
-	"gosws/util"
 	"io/ioutil"
+
+	"github.com/lvshuchengyin/gosws/util"
 )
 
 var (
-	gConfig *Config
+	gConfig Config
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	DB           XMLDb      `xml:"db"`
 	Log          XMLLog     `xml:"log"`
 	TemplatesDir string     `xml:"templatesdir"`
+	StaticDir    string     `xml:"staticdir"`
 	Session      XMLSession `xml:"session"`
 	Middlewares  []string   `xml:"middlewares>middleware"`
 }
@@ -92,4 +94,8 @@ func MiddlewareNames() []string {
 
 func TemplatesDir() string {
 	return gConfig.TemplatesDir
+}
+
+func StaticDir() string {
+	return gConfig.StaticDir
 }

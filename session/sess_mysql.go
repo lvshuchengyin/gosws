@@ -4,10 +4,11 @@ package session
 import (
 	"database/sql"
 	"encoding/json"
-	"gosws/db"
-	"gosws/logger"
 	"net/http"
 	"time"
+
+	"github.com/lvshuchengyin/gosws/db"
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 func init() {

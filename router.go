@@ -3,13 +3,14 @@ package gosws
 
 import (
 	"fmt"
-	"gosws/context"
-	"gosws/logger"
 	"net/http"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 type HandleInfo struct {

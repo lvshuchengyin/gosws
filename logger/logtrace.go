@@ -23,7 +23,7 @@ func NewLogTrace() *LogTrace {
 	return &LogTrace{startTime: time.Now().UnixNano()}
 }
 
-func (self *LogTrace) MainMoudle(module string) {
+func (self *LogTrace) Moudle(module string) {
 	self.startTime = time.Now().UnixNano()
 
 	_, file, line, ok := runtime.Caller(1)

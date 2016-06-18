@@ -3,28 +3,19 @@ package main
 
 import (
 	"fmt"
-	"gosws"
-	"gosws/context"
 	"time"
-	"views"
+
+	"github.com/lvshuchengyin/gosws"
+	"github.com/lvshuchengyin/gosws/context"
 )
 
-func test(ctx *context.Context) {
-	ctx.WriteString(fmt.Sprintf("%d", time.Now().UnixNano()))
+func test(ctx *context.Context, argid int64) {
+	msg := fmt.Sprintf("hello world, nowtime:%d, argid:%d", time.Now().Unix(), argid)
+	ctx.WriteString(msg)
 }
 
 func main() {
-	err := gosws.Init("conf.xml")
-	if err != nil {
-		fmt.Println("gosws Init err:", err)
-		panic(err)
-	}
-
 	httpServer := gosws.NewHttpServer()
-
-	httpServer.AddHandle("/", "get", test)
-
-	err = httpServer.Run()
-
-	fmt.Println("httpserver run err:", err)
+	httpServer.AddHandle(`^/(\d+)$`, "get", test)
+	httpServer.Run()
 }

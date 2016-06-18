@@ -2,9 +2,10 @@
 package gosws
 
 import (
-	"gosws/context"
-	"gosws/logger"
-	"gosws/middleware"
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
+	"github.com/lvshuchengyin/gosws/middleware"
+	"github.com/lvshuchengyin/gosws/util"
 )
 
 type ManagerMiddleware struct {
@@ -30,7 +31,7 @@ func (self *ManagerMiddleware) Add(name string) {
 }
 
 func (self *ManagerMiddleware) ProcessRequest(ctx *context.Context) error {
-	for _, ms := range self.mdws {
+	for _, ms := range self.getCopy() {
 		err := ms.ProcessRequest(ctx)
 		if err == nil {
 			continue
@@ -46,17 +47,28 @@ func (self *ManagerMiddleware) ProcessRequest(ctx *context.Context) error {
 }
 
 func (self *ManagerMiddleware) ProcessResponse(ctx *context.Context) error {
-	for i := len(self.mdws) - 1; i >= 0; i-- {
-		err := self.mdws[i].ProcessResponse(ctx)
+	mdws := self.getCopy()
+	for i := len(mdws) - 1; i >= 0; i-- {
+		err := mdws[i].ProcessResponse(ctx)
 		if err == nil {
 			continue
 		}
 
 		logger.Error("middleware %+v, ProcessResponse error! uri:%s, err:%v",
-			self.mdws[i], ctx.Req.URL.Path, err)
+			mdws[i], ctx.Req.URL.Path, err)
 
 		return err
 	}
 
 	return nil
+}
+
+func (self *ManagerMiddleware) getCopy() []middleware.Middleware {
+	cpmws := make([]middleware.Middleware, 0, len(self.mdws))
+	for _, ms := range self.mdws {
+		cpmw := util.CloneValue(ms).(middleware.Middleware)
+		cpmws = append(cpmws, cpmw)
+	}
+
+	return cpmws
 }

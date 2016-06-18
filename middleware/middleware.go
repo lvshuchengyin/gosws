@@ -1,7 +1,7 @@
 // middleware
 package middleware
 
-import "gosws/context"
+import "github.com/lvshuchengyin/gosws/context"
 
 type Middleware interface {
 	Name() string

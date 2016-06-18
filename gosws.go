@@ -2,14 +2,15 @@
 package gosws
 
 import (
-	"gosws/config"
-	"gosws/db"
-	"gosws/logger"
-	"gosws/middleware"
-	"gosws/session"
 	"runtime"
 
 	_ "github.com/go-sql-driver/mysql"
+
+	"github.com/lvshuchengyin/gosws/config"
+	"github.com/lvshuchengyin/gosws/db"
+	"github.com/lvshuchengyin/gosws/logger"
+	"github.com/lvshuchengyin/gosws/middleware"
+	"github.com/lvshuchengyin/gosws/session"
 )
 
 var (

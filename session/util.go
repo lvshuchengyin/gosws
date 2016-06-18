@@ -3,7 +3,8 @@ package session
 
 import (
 	"encoding/json"
-	"gosws/util"
+
+	"github.com/lvshuchengyin/gosws/util"
 )
 
 // return base64

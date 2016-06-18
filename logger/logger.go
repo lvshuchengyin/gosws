@@ -244,30 +244,65 @@ func (self *Logger) writeLog(msg string) {
 }
 
 func Swsd(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[S] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(SWSD, "[S] "+format, args...)
 }
 
 func Debug(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[D] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(DEBUG, "[D] "+format, args...)
 }
 
 func Info(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[I] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(INFO, "[I] "+format, args...)
 }
 
 func Warn(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[W] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(WARN, "[W] "+format, args...)
 }
 
 func Warning(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[W] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(WARN, "[W] "+format, args...)
 }
 
 func Error(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[E] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(ERROR, "[E] "+format, args...)
 }
 
 func Critical(format string, args ...interface{}) {
+	if loggerObj == nil {
+		fmt.Printf("[C] "+format+"\n", args...)
+		return
+	}
+
 	loggerObj.log(CRITICAL, "[C] "+format, args...)
 	panic(fmt.Sprintf(format, args...))
 }

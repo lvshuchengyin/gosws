@@ -3,16 +3,17 @@ package context
 
 import (
 	"encoding/json"
-	"gosws/logger"
-	"gosws/session"
 	"net/http"
+
+	"github.com/lvshuchengyin/gosws/logger"
+	"github.com/lvshuchengyin/gosws/session"
 )
 
 type Context struct {
 	Req     *http.Request
+	Res     http.ResponseWriter
 	Status  int
 	Session session.Session
-	Res     http.ResponseWriter
 	abort   bool
 	Log     *logger.LogTrace
 }
@@ -63,4 +64,18 @@ func (self *Context) ServeJson(code int, msg string, data interface{}) error {
 func (self *Context) Redirect(uri string) error {
 	http.Redirect(self.Res, self.Req, uri, 302)
 	return nil
+}
+
+//--------------------logtrace-------------------------
+
+func (self *Context) Module(m string) {
+	self.Log.Moudle(m)
+}
+
+func (self *Context) Start(m string) {
+	self.Log.Start(m)
+}
+
+func (self *Context) End(m string) {
+	self.Log.End(m)
 }

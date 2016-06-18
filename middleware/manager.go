@@ -3,8 +3,9 @@ package middleware
 
 import (
 	"fmt"
-	"gosws/config"
-	"gosws/session"
+
+	"github.com/lvshuchengyin/gosws/config"
+	"github.com/lvshuchengyin/gosws/session"
 )
 
 var (

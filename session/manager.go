@@ -3,7 +3,8 @@ package session
 
 import (
 	"fmt"
-	"gosws/config"
+
+	"github.com/lvshuchengyin/gosws/config"
 )
 
 var (

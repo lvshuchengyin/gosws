@@ -2,12 +2,13 @@
 package gosws
 
 import (
-	"gosws/config"
-	"gosws/context"
-	"gosws/logger"
 	"html/template"
 	"path/filepath"
 	"strings"
+
+	"github.com/lvshuchengyin/gosws/config"
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 func unescaped(x string) interface{} {

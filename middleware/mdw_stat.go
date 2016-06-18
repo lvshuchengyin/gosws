@@ -2,9 +2,10 @@
 package middleware
 
 import (
-	"gosws/context"
-	"gosws/logger"
 	"time"
+
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 const (
@@ -15,7 +16,6 @@ func init() {
 	Register(NAME_STAT, &MiddlewareStat{})
 }
 
-//-------MiddlewareStat----------
 type MiddlewareStat struct {
 	startTime int64
 }
@@ -30,7 +30,7 @@ func (self *MiddlewareStat) ProcessRequest(arg *context.Context) error {
 }
 
 func (self *MiddlewareStat) ProcessResponse(arg *context.Context) error {
-	//gosws.Debug("MiddlewareStat, uri:%s, status:%d, cost:%dms", arg.Req.RequestURI, arg.Status, (time.Now().UnixNano()-self.startTime)/1000000)
-	logger.Info("[%s:%s:%d:%dms]; trace:%s", arg.Req.Method, arg.Req.RequestURI, arg.Status, (time.Now().UnixNano()-self.startTime)/1000000, arg.Log.String())
+	logger.Info("[%s:%s:%d:%dms]; trace:%s", arg.Req.Method, arg.Req.RequestURI,
+		arg.Status, (time.Now().UnixNano()-self.startTime)/1000000, arg.Log.String())
 	return nil
 }

@@ -2,12 +2,13 @@
 package gosws
 
 import (
-	"gosws/config"
-	"gosws/context"
-	"gosws/logger"
 	"net/http"
 	"reflect"
 	"runtime/debug"
+
+	"github.com/lvshuchengyin/gosws/config"
+	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/logger"
 )
 
 type HttpServer struct {
@@ -18,6 +19,9 @@ type HttpServer struct {
 
 func NewHttpServer() *HttpServer {
 	addr := config.ListenAddr()
+	if addr == "" {
+		addr = ":8000"
+	}
 	middlewares := config.MiddlewareNames()
 
 	hs := &HttpServer{
@@ -38,7 +42,8 @@ func NewHttpServer() *HttpServer {
 	http.HandleFunc("/", hs.Process)
 
 	// static files
-	fs := http.FileServer(http.Dir("static"))
+	staticDir := config.StaticDir()
+	fs := http.FileServer(http.Dir(staticDir))
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	return hs
