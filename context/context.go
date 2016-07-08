@@ -18,6 +18,15 @@ type Context struct {
 	Log     *logger.LogTrace
 }
 
+func NewContext(w http.ResponseWriter, r *http.Request) *Context {
+	return &Context{
+		Res:    w,
+		Req:    r,
+		Status: 200,
+		Log:    logger.NewLogTrace(),
+	}
+}
+
 func (self *Context) Query(key string) string {
 	return self.Req.FormValue(key)
 }

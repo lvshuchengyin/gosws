@@ -11,6 +11,7 @@ gosws is mean golang simple web server.
 ###### Create file `main.go`
 
 ```go
+// main
 package main
 
 import (
@@ -18,17 +19,20 @@ import (
 	"time"
 
 	"github.com/lvshuchengyin/gosws"
-	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/controller"
 )
 
-func test(ctx *context.Context, argid int64) {
-	msg := fmt.Sprintf("hello world, nowtime:%d, argid:%d", time.Now().Unix(), argid)
-	ctx.WriteString(msg)
+type TestController struct {
+	controller.Controller
+}
+
+func (self *TestController) Get(i int64) {
+	self.Ctx.WriteString(fmt.Sprintf("%d, %d", time.Now().UnixNano(), i))
 }
 
 func main() {
 	httpServer := gosws.NewHttpServer()
-	httpServer.AddHandle(`^/(\d+)$`, "get", test)
+	httpServer.AddRoute(`^/(\d+)$`, &TestController{})
 	httpServer.Run()
 }
 ```

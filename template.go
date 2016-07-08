@@ -2,6 +2,7 @@
 package gosws
 
 import (
+	"encoding/json"
 	"html/template"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,11 @@ import (
 
 func unescaped(x string) interface{} {
 	return template.HTML(x)
+}
+
+func marshal(v interface{}) template.JS {
+	a, _ := json.Marshal(v)
+	return template.JS(a)
 }
 
 func TemplateRender(arg *context.Context, data interface{}, filePaths ...string) (err error) {
@@ -28,8 +34,8 @@ func TemplateRender(arg *context.Context, data interface{}, filePaths ...string)
 		rawTpls = append(rawTpls, fp)
 	}
 
-	tpl := template.New(filepath.Base(rawTpls[0]))
-	tpl = tpl.Funcs(template.FuncMap{"unescaped": unescaped})
+	tpl := template.New(filepath.Base(rawTpls[0])).Delims("[[", "]]")
+	tpl = tpl.Funcs(template.FuncMap{"unescaped": unescaped, "marshal": marshal})
 	tpl, err = tpl.ParseFiles(rawTpls...)
 	if err != nil {
 		logger.Error("template has err: %s, %s", filePaths, err.Error())

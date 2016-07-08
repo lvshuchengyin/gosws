@@ -2,12 +2,16 @@
 package gosws
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 	"runtime/debug"
+	"strconv"
+	"strings"
 
 	"github.com/lvshuchengyin/gosws/config"
 	"github.com/lvshuchengyin/gosws/context"
+	"github.com/lvshuchengyin/gosws/controller"
 	"github.com/lvshuchengyin/gosws/logger"
 )
 
@@ -49,8 +53,8 @@ func NewHttpServer() *HttpServer {
 	return hs
 }
 
-func (self *HttpServer) AddHandle(pattern, method string, handleFunc interface{}) error {
-	return self.router.AddHandle(pattern, method, handleFunc)
+func (self *HttpServer) AddRoute(pattern string, ctrl controller.ControllerInterface) error {
+	return self.router.AddRoute(pattern, ctrl)
 }
 
 // listen and serve
@@ -65,20 +69,30 @@ func (self *HttpServer) End(w http.ResponseWriter, status int, data string) {
 }
 
 func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
-	handleFunc, args := self.router.Route(r)
-	if handleFunc == nil {
+	ctx := context.NewContext(w, r)
+
+	defer func() {
+		if rec := recover(); rec != nil && !ctx.IsAbort() {
+			logger.Error("panic! uri:%s, err:%v \n%s", r.URL.Path, rec, string(debug.Stack()))
+			self.End(w, 500, "server error 500")
+		}
+	}()
+
+	// route
+	ctrl, ss := self.router.Route(r)
+	if ctrl == nil {
 		logger.Warning("Not found: %s", r.URL.Path)
 		self.End(w, 404, "not found")
 		return
 	}
 
-	ctx := &context.Context{
-		Res:    w,
-		Req:    r,
-		Status: 200,
-		Log:    logger.NewLogTrace(),
-	}
+	// new ctrl
+	ctrlValue := reflect.ValueOf(ctrl)
+	newCtrlValue := reflect.New(ctrlValue.Elem().Type())
+	newCtrl := newCtrlValue.Interface().(controller.ControllerInterface)
+	newCtrl.Init(ctx)
 
+	// mw process request
 	err := self.managerMiddleware.ProcessRequest(ctx)
 	if err != nil {
 		logger.Error("managerMiddleware.ProcessRequest error, uri:%s, err:%v", r.URL.Path, err)
@@ -86,19 +100,76 @@ func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	func() {
-		defer func() {
-			if rec := recover(); rec != nil && !ctx.IsAbort() {
-				logger.Error("panic! uri:%s, err:%v \n%s", r.URL.Path, rec, string(debug.Stack()))
-				self.End(w, 500, "server error 500")
+	ctrlMethodName := ""
+	switch strings.ToUpper(r.Method) {
+	case "GET":
+		ctrlMethodName = "Get"
+	case "POST":
+		ctrlMethodName = "Post"
+	case "DELETE":
+		ctrlMethodName = "Delete"
+	case "PUT":
+		ctrlMethodName = "Put"
+	case "HEAD":
+		ctrlMethodName = "Head"
+	case "PATCH":
+		ctrlMethodName = "Patch"
+	case "OPTIONS":
+		ctrlMethodName = "Options"
+	default:
+		logger.Warning("unknow method: %s", r.Method)
+		self.End(w, 400, fmt.Sprintf("unknow method: %s, 40050", r.Method))
+		return
+	}
+
+	methodValue := newCtrlValue.MethodByName(ctrlMethodName)
+	if !methodValue.IsValid() {
+		logger.Error("can't find controller method:%s", ctrlMethodName)
+		self.End(w, 404, "not found method, 40451")
+		return
+	}
+
+	handleType := methodValue.Type()
+	if handleType.NumIn() != len(ss) {
+		logger.Error("args num not correct")
+		self.End(w, 400, "bad request, 40052")
+		return
+	}
+
+	// convert
+	args := []reflect.Value{}
+	for i := 0; i < len(ss); i++ {
+		fak := handleType.In(i).Kind()
+		switch fak {
+		case reflect.Int64:
+			v, err := strconv.ParseInt(ss[i], 10, 64)
+			if err != nil {
+				self.End(w, 500, "bad request, 50060")
+				break
 			}
-		}()
+			args = append(args, reflect.ValueOf(v))
+		case reflect.Float64:
+			v, err := strconv.ParseInt(ss[i], 10, 64)
+			if err != nil {
+				self.End(w, 500, "bad request, 50061")
+				break
+			}
+			args = append(args, reflect.ValueOf(v))
+		case reflect.String:
+			args = append(args, reflect.ValueOf(ss[i]))
+		default:
+			logger.Error("controller:%+v args have invalid typev:%+v, must be int64, float64, string", ctrl, fak)
+			self.End(w, 500, "bad request, 50062")
+			return
+		}
+	}
 
-		args = append([]reflect.Value{reflect.ValueOf(ctx)}, args...)
+	// do
+	newCtrlValue.MethodByName("Prepare").Call(nil)
+	methodValue.Call(args)
+	newCtrlValue.MethodByName("Finish").Call(nil)
 
-		reflect.ValueOf(handleFunc).Call(args)
-	}()
-
+	// mw process reponse
 	err = self.managerMiddleware.ProcessResponse(ctx)
 	if err != nil {
 		logger.Error("managerMiddleware.ProcessResponse error, uri:%s, err:%v", r.URL.Path, err)
