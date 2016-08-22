@@ -1,43 +1,41 @@
 // manager
 package middleware
 
-import (
-	"fmt"
+import "github.com/lvshuchengyin/gosws/context"
 
-	"github.com/lvshuchengyin/gosws/config"
-	"github.com/lvshuchengyin/gosws/session"
-)
+type ProcessNextFunc func() error
+type ProcessResFunc func() error
 
-var (
-	middlewares map[string]Middleware = map[string]Middleware{}
-)
-
-func Register(name string, sf Middleware) error {
-	middlewares[name] = sf
-	return nil
+type MiddlewareManager struct {
+	middlewares []Middleware
 }
 
-func Get(name string) Middleware {
-	mw, ok := middlewares[name]
-	if !ok {
-		panic(fmt.Sprintf("not found %s middleware", name))
+func NewMiddlewareManager() *MiddlewareManager {
+	m := &MiddlewareManager{
+		middlewares: make([]Middleware, 0, 1),
 	}
-	return mw
+
+	return m
 }
 
-func Init() error {
-	confSession := config.Session()
-	if confSession.Sessname == "" {
-		return nil
+func (self *MiddlewareManager) Add(mdw Middleware) {
+	self.middlewares = append(self.middlewares, mdw)
+}
+
+func (self *MiddlewareManager) Process(ctx *context.Context, processResFunc ProcessResFunc) (err error) {
+	return self.processNext(0, ctx, processResFunc)
+}
+
+func (self *MiddlewareManager) processNext(index int, ctx *context.Context, processResFunc ProcessResFunc) (err error) {
+	if index >= len(self.middlewares) {
+		return processResFunc()
 	}
 
-	name := confSession.Sessname
-	secretKey := config.SecretKey()
+	mdw := self.middlewares[index]
+	cb := func() error {
+		return self.processNext(index+1, ctx, processResFunc)
+	}
 
-	sessionFactory := session.Get(name)
-	mw := Get(NAME_SESS)
-	mw_sess := mw.(*MiddlewareSession)
-	mw_sess.Init(sessionFactory, secretKey)
-
-	return nil
+	err = mdw.Process(ctx, cb)
+	return
 }

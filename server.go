@@ -13,12 +13,15 @@ import (
 	"github.com/lvshuchengyin/gosws/context"
 	"github.com/lvshuchengyin/gosws/controller"
 	"github.com/lvshuchengyin/gosws/logger"
+	"github.com/lvshuchengyin/gosws/middleware"
 )
 
 type HttpServer struct {
 	server            *http.Server
 	router            *Router
-	managerMiddleware *ManagerMiddleware
+	middlewareManager *middleware.MiddlewareManager
+	secretKey         string
+	sessExpire        int64
 }
 
 func NewHttpServer() *HttpServer {
@@ -26,7 +29,6 @@ func NewHttpServer() *HttpServer {
 	if addr == "" {
 		addr = ":8000"
 	}
-	middlewares := config.MiddlewareNames()
 
 	hs := &HttpServer{
 		server: &http.Server{
@@ -34,13 +36,13 @@ func NewHttpServer() *HttpServer {
 			Handler: http.DefaultServeMux,
 		},
 		router:            NewRouter(),
-		managerMiddleware: NewManagerMiddleware(),
+		middlewareManager: middleware.NewMiddlewareManager(),
+		secretKey:         config.SecretKey(),
+		sessExpire:        config.SessionLifeTime(),
 	}
 
 	// middleware
-	for _, mwName := range middlewares {
-		hs.managerMiddleware.Add(mwName)
-	}
+	hs.middlewareManager.Add(&middleware.MiddlewareStat{})
 
 	// route
 	http.HandleFunc("/", hs.Process)
@@ -53,8 +55,44 @@ func NewHttpServer() *HttpServer {
 	return hs
 }
 
-func (self *HttpServer) AddRoute(pattern string, ctrl controller.ControllerInterface) error {
-	return self.router.AddRoute(pattern, ctrl)
+func (self *HttpServer) AddMiddleware(mdw middleware.Middleware) {
+	self.middlewareManager.Add(mdw)
+}
+
+func (self *HttpServer) AddController(pattern string, ctrl controller.ControllerInterface) error {
+	return self.router.AddController(pattern, ctrl)
+}
+
+func (self *HttpServer) AddRoute(pattern, method string, handleFunc interface{}) error {
+	// check the handleFunc params
+	ht := reflect.TypeOf(handleFunc)
+	if ht.Kind() != reflect.Func {
+		err := fmt.Errorf("%s not a func type", ht.Name())
+		panic(err)
+		return err
+	}
+
+	for i := 0; i < ht.NumIn(); i++ {
+		at := ht.In(i)
+		if i == 0 {
+			var hap *context.Context
+			if at != reflect.TypeOf(hap) {
+				err := fmt.Errorf("handle func: %s, first arg type must be *Context, now is %+v", ht.String(), at)
+				panic(err)
+				return err
+			}
+			continue
+		}
+
+		k := at.Kind()
+		if k != reflect.Int64 && k != reflect.Float64 && k != reflect.String {
+			err := fmt.Errorf("handle func: %s, args type must be int64, float64, string", ht.String())
+			panic(err)
+			return err
+		}
+	}
+
+	return self.router.AddRoute(pattern, method, handleFunc)
 }
 
 // listen and serve
@@ -69,7 +107,7 @@ func (self *HttpServer) End(w http.ResponseWriter, status int, data string) {
 }
 
 func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
-	ctx := context.NewContext(w, r)
+	ctx := context.NewContext(w, r, self.secretKey, self.sessExpire)
 
 	defer func() {
 		if rec := recover(); rec != nil && !ctx.IsAbort() {
@@ -79,26 +117,36 @@ func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// route
-	ctrl, ss := self.router.Route(r)
-	if ctrl == nil {
+	handle, ss := self.router.Route(r)
+	if handle == nil {
 		logger.Warning("Not found: %s", r.URL.Path)
 		self.End(w, 404, "not found")
 		return
 	}
+
+	// cb
+	processResFunc := func() error {
+		ctrl, ok := handle.(controller.ControllerInterface)
+		if ok {
+			self.processController(w, r, ctrl, ctx, ss)
+		} else {
+			self.processHandleFunc(w, r, handle, ctx, ss)
+		}
+
+		return nil
+	}
+
+	self.middlewareManager.Process(ctx, processResFunc)
+}
+
+func (self *HttpServer) processController(w http.ResponseWriter, r *http.Request,
+	ctrl controller.ControllerInterface, ctx *context.Context, ss []string) {
 
 	// new ctrl
 	ctrlValue := reflect.ValueOf(ctrl)
 	newCtrlValue := reflect.New(ctrlValue.Elem().Type())
 	newCtrl := newCtrlValue.Interface().(controller.ControllerInterface)
 	newCtrl.Init(ctx)
-
-	// mw process request
-	err := self.managerMiddleware.ProcessRequest(ctx)
-	if err != nil {
-		logger.Error("managerMiddleware.ProcessRequest error, uri:%s, err:%v", r.URL.Path, err)
-		self.End(w, 500, "server error 50010")
-		return
-	}
 
 	ctrlMethodName := ""
 	switch strings.ToUpper(r.Method) {
@@ -131,7 +179,7 @@ func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
 
 	handleType := methodValue.Type()
 	if handleType.NumIn() != len(ss) {
-		logger.Error("args num not correct")
+		logger.Error("args num not correct, get args: %v", ss)
 		self.End(w, 400, "bad request, 40052")
 		return
 	}
@@ -144,22 +192,22 @@ func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
 		case reflect.Int64:
 			v, err := strconv.ParseInt(ss[i], 10, 64)
 			if err != nil {
-				self.End(w, 500, "bad request, 50060")
-				break
+				self.End(w, 400, "bad request, 40060")
+				return
 			}
 			args = append(args, reflect.ValueOf(v))
 		case reflect.Float64:
 			v, err := strconv.ParseInt(ss[i], 10, 64)
 			if err != nil {
-				self.End(w, 500, "bad request, 50061")
-				break
+				self.End(w, 400, "bad request, 40061")
+				return
 			}
 			args = append(args, reflect.ValueOf(v))
 		case reflect.String:
 			args = append(args, reflect.ValueOf(ss[i]))
 		default:
-			logger.Error("controller:%+v args have invalid typev:%+v, must be int64, float64, string", ctrl, fak)
-			self.End(w, 500, "bad request, 50062")
+			logger.Error("controller:%+v args have invalid type:%+v, must be int64, float64, string", ctrl, fak)
+			self.End(w, 400, "bad request, 40062")
 			return
 		}
 	}
@@ -168,12 +216,51 @@ func (self *HttpServer) Process(w http.ResponseWriter, r *http.Request) {
 	newCtrlValue.MethodByName("Prepare").Call(nil)
 	methodValue.Call(args)
 	newCtrlValue.MethodByName("Finish").Call(nil)
+	return
+}
 
-	// mw process reponse
-	err = self.managerMiddleware.ProcessResponse(ctx)
-	if err != nil {
-		logger.Error("managerMiddleware.ProcessResponse error, uri:%s, err:%v", r.URL.Path, err)
-		self.End(w, 500, "server error 50011")
+func (self *HttpServer) processHandleFunc(w http.ResponseWriter, r *http.Request,
+	handleFunc interface{}, ctx *context.Context, ss []string) {
+
+	handleType := reflect.TypeOf(handleFunc)
+	if handleType.NumIn()-1 != len(ss) {
+		logger.Error("args num not correct, get args: %v", ss)
+		self.End(w, 400, "bad request, 40076")
 		return
 	}
+
+	// convert
+	args := []reflect.Value{}
+	for i := 0; i < len(ss); i++ {
+		fak := handleType.In(i + 1).Kind()
+		switch fak {
+		case reflect.Int64:
+			v, err := strconv.ParseInt(ss[i], 10, 64)
+			if err != nil {
+				self.End(w, 400, "bad request, 40070")
+				return
+			}
+			args = append(args, reflect.ValueOf(v))
+		case reflect.Float64:
+			v, err := strconv.ParseInt(ss[i], 10, 64)
+			if err != nil {
+				self.End(w, 400, "bad request, 40071")
+				return
+			}
+			args = append(args, reflect.ValueOf(v))
+		case reflect.String:
+			args = append(args, reflect.ValueOf(ss[i]))
+		default:
+			logger.Error("handleFunc:%+v args have invalid type:%+v, must be int64, float64, string", handleFunc, fak)
+			self.End(w, 400, "bad request, 40072")
+			return
+		}
+	}
+
+	// add ctx argument
+	args = append([]reflect.Value{reflect.ValueOf(ctx)}, args...)
+
+	// do
+	reflect.ValueOf(handleFunc).Call(args)
+	return
 }

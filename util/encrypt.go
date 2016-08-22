@@ -61,6 +61,13 @@ func UrlBase64Encode(value []byte) string {
 }
 
 func UrlBase64Decode(value []byte) ([]byte, error) {
+	pad := len(value) % 4
+	if pad != 0 {
+		for i := 0; i < 4-pad; i++ {
+			value = append(value, '=')
+		}
+	}
+
 	encoding := base64.URLEncoding
 	decoded := make([]byte, encoding.DecodedLen(len(value)))
 	b, err := encoding.Decode(decoded, value)

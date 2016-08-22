@@ -217,16 +217,7 @@ func (self *Logger) log(level int, format string, args ...interface{}) {
 		return
 	}
 
-	timePrefix := time.Now().Format("2006-01-02 15:04:05")
-	_, file, line, ok := runtime.Caller(2)
-	if !ok {
-		file = "???"
-		line = 0
-	}
-
-	_, filename := path.Split(file)
-	msg := fmt.Sprintf("%s [%s:%d] %s\n", timePrefix, filename, line, fmt.Sprintf(format, args...))
-
+	msg := getLogMsg(level, format, args...)
 	self.writeLog(msg)
 }
 
@@ -243,9 +234,27 @@ func (self *Logger) writeLog(msg string) {
 	self.logobj.Print(msg)
 }
 
+func getLogMsg(level int, format string, args ...interface{}) string {
+	timePrefix := time.Now().Format("2006-01-02 15:04:05")
+	_, file, line, ok := runtime.Caller(3)
+	if !ok {
+		file = "???"
+		line = 0
+	}
+
+	_, filename := path.Split(file)
+	msg := fmt.Sprintf("%s [%s:%d] %s\n", timePrefix, filename, line, fmt.Sprintf(format, args...))
+	return msg
+}
+
+func printLog(level int, format string, args ...interface{}) {
+	msg := getLogMsg(level, format, args...)
+	fmt.Print(msg)
+}
+
 func Swsd(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[S] "+format+"\n", args...)
+		printLog(SWSD, "[S] "+format, args...)
 		return
 	}
 
@@ -254,7 +263,7 @@ func Swsd(format string, args ...interface{}) {
 
 func Debug(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[D] "+format+"\n", args...)
+		printLog(DEBUG, "[D] "+format, args...)
 		return
 	}
 
@@ -263,7 +272,7 @@ func Debug(format string, args ...interface{}) {
 
 func Info(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[I] "+format+"\n", args...)
+		printLog(INFO, "[I] "+format, args...)
 		return
 	}
 
@@ -272,7 +281,7 @@ func Info(format string, args ...interface{}) {
 
 func Warn(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[W] "+format+"\n", args...)
+		printLog(WARN, "[W] "+format, args...)
 		return
 	}
 
@@ -281,7 +290,7 @@ func Warn(format string, args ...interface{}) {
 
 func Warning(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[W] "+format+"\n", args...)
+		printLog(WARN, "[W] "+format, args...)
 		return
 	}
 
@@ -290,7 +299,7 @@ func Warning(format string, args ...interface{}) {
 
 func Error(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[E] "+format+"\n", args...)
+		printLog(ERROR, "[E] "+format, args...)
 		return
 	}
 
@@ -299,7 +308,7 @@ func Error(format string, args ...interface{}) {
 
 func Critical(format string, args ...interface{}) {
 	if loggerObj == nil {
-		fmt.Printf("[C] "+format+"\n", args...)
+		printLog(CRITICAL, "[C] "+format, args...)
 		return
 	}
 

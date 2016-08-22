@@ -1,32 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<gosws> 
-	<secretkey>cbhjotgqwfdpojma23165748aea2580o</secretkey>  
-	<listenaddr>:8000</listenaddr>  
-	<db> 
-		<source>root:@tcp(127.0.0.1:3306)/tmp?charset=utf8</source>  
-		<maxidle>5</maxidle>  
-		<maxopen>50</maxopen> 
-	</db>  
-	<log> 
-		<level>debug</level>  
-		<path>logs/sws.log</path>  
-		<isstd>1</isstd>  
-		<maxfilenum>7</maxfilenum>  
-		<maxfilesize>2024000</maxfilesize> 
+<gosws>
+	<secretkey>cbhjotgqwfdpojma23165748aea2580o</secretkey>
+	<listenaddr>:8000</listenaddr>
+	<db>
+		<source>root:@tcp(127.0.0.1:3306)/tmp?charset=utf8</source>
+		<maxidle>5</maxidle>
+		<maxopen>30</maxopen>
+	</db>
+	<log>
+		<level>debug</level>
+		<path>logs/sws.log</path>
+		<isstd>1</isstd>
+		<maxfilenum>3</maxfilenum>
+		<maxfilesize>2024000</maxfilesize>
 	</log>
 	<templatesdir>../templates</templatesdir>
 	<staticdir>../static</staticdir>
-	<session> 
-		<lifetime>86400</lifetime>
-		<sessname>mysql</sessname>
-		<config>
-			<name>mysql</name>
-			<jsonconfig>{"sessionGCInterval": 60}</jsonconfig>
-		</config>
-	</session> 
-	<middlewares>
-		<middleware>stat</middleware>
-		<middleware>session</middleware>
-	</middlewares>
+	<sessionlifetime>86400</sessionlifetime>
 </gosws>

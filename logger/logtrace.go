@@ -4,7 +4,6 @@ package logger
 import (
 	"bytes"
 	"fmt"
-	"path"
 	"runtime"
 	"time"
 )
@@ -13,45 +12,31 @@ type LogTrace struct {
 	index int
 	buf   bytes.Buffer
 
-	startTime    int64
-	subName      string
-	subStartTime int64
-	subStartLine int
+	startTime      int64
+	lastRecordTime int64
 }
 
 func NewLogTrace() *LogTrace {
-	return &LogTrace{startTime: time.Now().UnixNano()}
-}
-
-func (self *LogTrace) Moudle(module string) {
-	self.startTime = time.Now().UnixNano()
-
-	_, file, line, ok := runtime.Caller(1)
-	if !ok {
-		file = "???"
-		line = 0
-	} else {
-		file = path.Base(file)
+	return &LogTrace{
+		startTime:      time.Now().UnixNano(),
+		lastRecordTime: time.Now().UnixNano(),
 	}
-	msg := fmt.Sprintf("[%s:%s:%d],", module, file, line)
-	self.buf.WriteString(msg)
 }
 
-func (self *LogTrace) Start(m string) {
+func (self *LogTrace) SetTrace(name string, status interface{}) {
 	self.index += 1
-	self.subName = m
-	self.subStartTime = time.Now().UnixNano()
-	var ok bool
-	_, _, self.subStartLine, ok = runtime.Caller(1)
-	if !ok {
-		self.subStartLine = 0
-	}
-}
 
-func (self *LogTrace) End(status string) {
-	costtime := (time.Now().UnixNano() - self.subStartTime) / 1000000
-	msg := fmt.Sprintf("%d[%s:%d:%dms:%s],", self.index, self.subName, self.subStartLine, costtime, status)
+	now := time.Now().UnixNano()
+	_, _, line, ok := runtime.Caller(1)
+	if !ok {
+		line = 0
+	}
+
+	costtime := (now - self.lastRecordTime) / 1000000
+	msg := fmt.Sprintf("%d[%s:%d:%dms:%v],", self.index, name, line, costtime, status)
 	self.buf.WriteString(msg)
+
+	self.lastRecordTime = now
 }
 
 func (self *LogTrace) String() string {
